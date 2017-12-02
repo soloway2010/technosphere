@@ -89,15 +89,15 @@ class MyDecisionTreeClassifier:
     def __get_feature_ids_sqrt(self, n_feature):
         feature_ids = range(n_feature)
         np.random.shuffle(feature_ids)
-        return # Ваш код
+        return feature_ids[:int(np.sqrt(n_feature))]
         
     def __get_feature_ids_log2(self, n_feature):
         feature_ids = range(n_feature)
         np.random.shuffle(feature_ids)
-        return # Ваш код
+        return feature_ids[:int(np.log2(n_feature))]
 
     def __get_feature_ids_N(self, n_feature):
-        return # Ваш код
+        return range(n_feature)
     
     def __sort_samples(self, x, y):
         sorted_idx = x.argsort()
@@ -108,7 +108,7 @@ class MyDecisionTreeClassifier:
         right_mask = ~left_mask
         return x[left_mask], x[right_mask], y[left_mask], y[right_mask]
 
-    def find_threshold(self, x, y):
+    def __find_threshold(self, x, y):
         # Что делает этот блок кода?
         # Заносит в sorted_x и sorted_y отсортированные значения фичи и их метки
         # В class_number заносит количество уникальных меток
@@ -166,7 +166,39 @@ class MyDecisionTreeClassifier:
         # self.__find_threshold
         # self.__div_samples
         # self.__fit_node
-        pass
+        
+        min_coef = float('+inf')
+        cor_threshold = None
+        cor_feature_id = None
+
+        feature_ids = self.get_feature_ids(x.shape[1])
+
+        for i in feature_ids:
+        	coef, threshold = self.__find_threshold(x[:, i], y)
+        	if coef < min_coef:
+        		min_coef = coef
+        		cor_threshold = threshold
+        		cor_feature_id = i
+
+        if len(y) < self.min_samples_split or depth == self.max_depth or cor_threshold == None :
+        	class_count = np.bincount(y)
+        	class_count = np.argsort(class_count)
+        	self.tree[node_id] = (self.LEAF_TYPE, class_count[-1], 0)
+        	return
+
+        if self.sufficient_share < 1:
+        	class_count = np.bincount(y)
+        	class_count_ids = np.argsort(class_count)
+        	if class_count[class_count_ids[-1]]/len(class_count) >= self.sufficient_share:
+        		self.tree[node_id] = (self.LEAF_TYPE, class_count_ids[-1], 0)
+        		return
+
+        x_l, x_r, y_l, y_r = self.__div_samples(x, y, cor_feature_id, cor_threshold)
+
+        self.tree[node_id] = (self.NON_LEAF_TYPE, cor_feature_id, cor_threshold)
+        self.__fit_node(x_r, y_r, 2*node_id + 1, depth + 1)
+        self.__fit_node(x_l, y_l, 2*node_id + 2, depth + 1)
+
     
     def fit(self, x, y):
         self.num_class = np.unique(y).size
@@ -204,14 +236,3 @@ class MyDecisionTreeClassifier:
         self.fit(x_train, y_train)
         return self.predict(predicted_x)
 
-x = np.array([[0, 0, 0], [3, 2, 0], [1, 9, 0], [4, 2, 0], [6, 2, 0], [10, 7, 0], [1, 7, 0], [8, 9, 0]])
-y = np.array([2, 2, 4, 3, 0, 2, 2, 1])
-desTree = MyDecisionTreeClassifier(criterion='misclass')
-
-f, thres = desTree.find_threshold(x[:, 0], y)
-print f
-print thres
-
-f, thres = desTree.find_threshold(x[:, 1], y)
-print f
-print thres
