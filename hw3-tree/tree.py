@@ -171,7 +171,7 @@ class MyDecisionTreeClassifier:
         cor_threshold = None
         cor_feature_id = None
 
-        feature_ids = self.get_feature_ids(x.shape[1])
+        feature_ids = self.get_feature_ids(self.num_class)
 
         for i in feature_ids:
         	coef, threshold = self.__find_threshold(x[:, i], y)
