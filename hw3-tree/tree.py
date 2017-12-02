@@ -195,6 +195,12 @@ class MyDecisionTreeClassifier:
 
         x_l, x_r, y_l, y_r = self.__div_samples(x, y, cor_feature_id, cor_threshold)
 
+        if x_r.shape[0] == x.shape[0] or x_l.shape[0] == x.shape[0]:
+        	class_count = np.bincount(y)
+        	class_count = np.argsort(class_count)
+        	self.tree[node_id] = (self.LEAF_TYPE, class_count[-1], 0)
+        	return
+
         self.tree[node_id] = (self.NON_LEAF_TYPE, cor_feature_id, cor_threshold)
         self.__fit_node(x_r, y_r, 2*node_id + 1, depth + 1)
         self.__fit_node(x_l, y_l, 2*node_id + 2, depth + 1)
@@ -236,3 +242,39 @@ class MyDecisionTreeClassifier:
         self.fit(x_train, y_train)
         return self.predict(predicted_x)
 
+df = pd.read_csv('./cs-training.csv', sep=',').dropna()
+
+x = df.as_matrix(columns=df.columns[1:])
+y = df.as_matrix(columns=df.columns[:1])
+y = y.reshape(y.shape[0])
+
+my_clf = MyDecisionTreeClassifier(min_samples_split=2)
+clf = DecisionTreeClassifier(min_samples_split=2)
+
+t1 = time()
+my_clf.fit(x, y)
+t2 = time()
+print(t2 - t1)
+
+t1 = time()
+clf.fit(x, y)
+t2 = time()
+print(t2 - t1)
+
+print "#########"
+
+gkf = KFold(n_splits=5, shuffle=True)
+
+for train, test in gkf.split(x, y):
+    X_train, y_train = x[train], y[train]
+    X_test, y_test = x[test], y[test]
+    my_clf.fit(X_train, y_train)
+    print(accuracy_score(y_pred=my_clf.predict(X_test), y_true=y_test))
+
+print "########"
+
+for train, test in gkf.split(x, y):
+    X_train, y_train = x[train], y[train]
+    X_test, y_test = x[test], y[test]
+    clf.fit(X_train, y_train)
+    print(accuracy_score(y_pred=clf.predict(X_test), y_true=y_test))
